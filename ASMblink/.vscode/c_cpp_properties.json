@@ -1,0 +1,40 @@
+//
+// !!! WARNING !!! AUTO-GENERATED FILE!
+// PLEASE DO NOT MODIFY IT AND USE "platformio.ini":
+// https://docs.platformio.org/page/projectconf/section_env_build.html#build-flags
+//
+{
+    "configurations": [
+        {
+            "name": "PlatformIO",
+            "includePath": [
+                "F:/Proyectos/MCU_integrados/TESTS/ASMblink/include",
+                "F:/Proyectos/MCU_integrados/TESTS/ASMblink/src",
+                ""
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "F:/Proyectos/MCU_integrados/TESTS/ASMblink/include",
+                    "F:/Proyectos/MCU_integrados/TESTS/ASMblink/src",
+                    ""
+                ]
+            },
+            "defines": [
+                "F_CPU=8000000L",
+                "PLATFORMIO=60116",
+                "ARDUINO_AVR_ATTINYX8",
+                "__AVR_ATtiny88__",
+                ""
+            ],
+            "cStandard": "gnu11",
+            "cppStandard": "gnu++11",
+            "compilerPath": "C:/Users/adria/.platformio/packages/toolchain-atmelavr/bin/avr-gcc.exe",
+            "compilerArgs": [
+                "-mmcu=attiny88",
+                ""
+            ]
+        }
+    ],
+    "version": 4
+}
