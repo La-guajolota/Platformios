@@ -16,8 +16,8 @@
 #define stepC_rmt RMT_CHANNEL_2  // RMT channel for step C
 
 // GPIOs connected to each channel
-#define PULSE_PIN_A GPIO_NUM_26  // GPIO pin for step A
-#define PULSE_PIN_B GPIO_NUM_23  // GPIO pin for step B
+#define PULSE_PIN_A GPIO_NUM_27  // GPIO pin for step A
+#define PULSE_PIN_B GPIO_NUM_26  // GPIO pin for step B
 #define PULSE_PIN_C GPIO_NUM_25  // GPIO pin for step C
 
 const int N = 200;               // Number of pulses to generate
