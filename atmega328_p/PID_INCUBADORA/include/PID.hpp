@@ -1,91 +1,120 @@
 /****************************************************************************************
- * Archivo: PID.hpp
- * Descripción: Este archivo contiene la declaración de la clase `PIDController` que
- *              implementa un controlador PID para sistemas embebidos. El controlador
- *              incluye los cálculos de los términos proporcional, integral y derivativo
- *              y tiene soporte para la actualización dinámica de las ganancias, así como
- *              protección contra el *wind-up* del integrador.
+ * @file PID.hpp
+ * @brief This file contains the declaration of the `PIDController` class, which
+ *        implements a PID controller for embedded systems. The controller includes
+ *        calculations for the proportional, integral, and derivative terms, and
+ *        supports dynamic gain updates and anti-windup protection for the integrator.
  *
- * Autor: Adrian Silva Palafox
- * Empresa: Fourie Embeds
- * Fecha de creación: Noviembre 2024
+ * @author Adrian Silva Palafox
+ * @company Fourie Embeds
+ * @date November 2024
  *
- * Licencia: Este código es de código abierto bajo la licencia [Tu Licencia Aquí].
- *           Puede ser modificado y distribuido con fines educativos o comerciales.
+ * @license This code is open source under the [Your License Here] license.
+ *          It can be modified and distributed for educational or commercial purposes.
  *
- * Nota: Asegúrese de que las librerías necesarias estén correctamente incluidas y
- *       configuradas en su entorno de desarrollo.
+ * @note Ensure that the necessary libraries are correctly included and configured
+ *       in your development environment.
  ***************************************************************************************/
 
 #ifndef PID_HPP
 #define PID_HPP
 
-// Estructura para agrupar las ganancias del controlador PID
-// Esta estructura es opcional y permite retornar las tres ganancias (Kp, Ki, Kd) en un solo objeto
+/**
+ * @struct PIDGains
+ * @brief A structure to group the PID controller gains.
+ * @details This is optional and allows returning all three gains (Kp, Ki, Kd) in a single object.
+ */
 struct PIDGains
 {
-    float Kp; // Ganancia proporcional
-    float Ki; // Ganancia integral
-    float Kd; // Ganancia derivativa
+    float Kp; // Proportional gain
+    float Ki; // Integral gain
+    float Kd; // Derivative gain
 };
 
 class PIDController
 {
 public:
-    // Constructor de la clase PIDController
-    // Inicializa los parámetros del PID, como las ganancias y los límites de salida e integrador.
+    /**
+     * @brief Constructor for the PIDController class.
+     * @details Initializes the PID parameters, such as gains, output limits, and integrator limits.
+     * @param kp Proportional gain.
+     * @param ki Integral gain.
+     * @param kd Derivative gain.
+     * @param tau Low-pass filter time constant for the derivative term.
+     * @param limMin Minimum output limit of the controller.
+     * @param limMax Maximum output limit of the controller.
+     * @param limMinInt Minimum integrator limit to prevent wind-up.
+     * @param limMaxInt Maximum integrator limit to prevent wind-up.
+     * @param t Sampling time (in seconds).
+     */
     PIDController(float kp, float ki, float kd,
-                  float tau,                        // Constante del filtro de paso bajo para el derivativo
-                  float limMin, float limMax,       // Límites de salida del controlador
-                  float limMinInt, float limMaxInt, // Límites del integrador para evitar el wind-up
-                  float t);                         // Tiempo de muestreo (en segundos)
+                  float tau,                        
+                  float limMin, float limMax,       
+                  float limMinInt, float limMaxInt, 
+                  float t);                         
 
-    // Métodos públicos:
+    // Public methods:
 
-    // Reinicia el controlador PID a su estado inicial (borra el integrador, el error previo, etc.)
+    /**
+     * @brief Resets the PID controller to its initial state.
+     * @details Clears the integrator, previous error, etc.
+     */
     void reset();
 
-    // Actualiza la salida del controlador PID con base en el setpoint (punto de consigna) y la medición actual
+    /**
+     * @brief Updates the PID controller output based on the setpoint and the current measurement.
+     * @param setpoint The desired value.
+     * @param measurement The current measured value.
+     * @return The calculated output of the controller.
+     */
     float update(float setpoint, float measurement);
 
-    // Actualiza las ganancias del controlador PID (Kp, Ki, Kd) en tiempo real
+    /**
+     * @brief Updates the PID controller gains (Kp, Ki, Kd) in real-time.
+     * @param kp The new proportional gain.
+     * @param ki The new integral gain.
+     * @param kd The new derivative gain.
+     */
     void updateGains(float kp, float ki, float kd);
 
-    // Métodos para obtener las ganancias actuales del PID:
-    float getKp() const; // Retorna la ganancia proporcional (Kp)
-    float getKi() const; // Retorna la ganancia integral (Ki)
-    float getKd() const; // Retorna la ganancia derivativa (Kd)
+    // Methods to get the current PID gains:
+    float getKp() const; // Returns the proportional gain (Kp)
+    float getKi() const; // Returns the integral gain (Ki)
+    float getKd() const; // Returns the derivative gain (Kd)
 
-    // Método para obtener todas las ganancias juntas como un struct
-    // Esto es útil para enviar todas las ganancias en un solo paquete, por ejemplo, por comunicación serial
+    /**
+     * @brief Gets all the gains together as a struct.
+     * @details This is useful for sending all gains in a single packet, for example, via serial communication.
+     * @return A PIDGains struct containing the current gains.
+     */
     PIDGains getGains() const;
 
 private:
-    // Parámetros internos del controlador PID
-    float Kp; // Ganancia proporcional
-    float Ki; // Ganancia integral
-    float Kd; // Ganancia derivativa
+    // Internal parameters of the PID controller
+    float Kp; // Proportional gain
+    float Ki; // Integral gain
+    float Kd; // Derivative gain
 
-    float tau; // Constante del filtro de paso bajo para el término derivativo
+    float tau; // Low-pass filter time constant for the derivative term
 
-    // Límites de salida del controlador
-    float limMin; // Límite mínimo de la salida
-    float limMax; // Límite máximo de la salida
+    // Controller output limits
+    float limMin; // Minimum output limit
+    float limMax; // Maximum output limit
 
-    // Límites para el integrador (para evitar el wind-up)
-    float limMinInt; // Límite mínimo para el integrador
-    float limMaxInt; // Límite máximo para el integrador
+    // Integrator limits (to prevent wind-up)
+    float limMinInt; // Minimum integrator limit
+    float limMaxInt; // Maximum integrator limit
 
-    // Tiempo de muestreo (en segundos)
+    // Sampling time (in seconds)
     float T;
 
-    // Variables de memoria interna del controlador
-    float integrator;      // Acumulador del término integral
-    float prevError;       // Error de la iteración anterior (necesario para calcular el término derivativo)
-    float differentiator;  // Almacena el valor del término derivativo
-    float prevMeasurement; // Medición anterior (necesaria para calcular el derivado)
+    // Internal memory variables of the controller
+    float integrator;      // Accumulator for the integral term
+    float prevError;       // Error from the previous iteration (needed to calculate the derivative term)
+    float differentiator;  // Stores the value of the derivative term
+    float prevMeasurement; // Previous measurement (needed to calculate the derivative)
 
-    // Salida del controlador (resultado final después de aplicar la fórmula PID)
+    // Controller output (final result after applying the PID formula)
     float out;
 };
 

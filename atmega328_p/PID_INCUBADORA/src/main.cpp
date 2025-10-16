@@ -1,212 +1,211 @@
 /****************************************************************************************
- * Archivo: ControladorPID.ino
- * Descripción: Este programa implementa un sistema de control PID para regular la
- *              temperatura de un sistema mediante un relé controlado por un SSR (Solid
- *              State Relay). La temperatura se mide con un sensor DHT (11 o 22), y el
- *              controlador PID ajusta el tiempo de activación del SSR en función de la
- *              diferencia entre la temperatura medida y un setpoint predefinido.
+ * @file main.cpp
+ * @brief This program implements a PID control system to regulate the temperature of a
+ *        system using a Solid State Relay (SSR). The temperature is measured with a DHT
+ *        sensor (11 or 22), and the PID controller adjusts the activation time of the
+ *        SSR based on the difference between the measured temperature and a predefined setpoint.
  *
- * Autor: Adrian Silva Palafox
- * Empresa: Fourie Embeds
- * Fecha: Noviembre 2024
+ * @author Adrian Silva Palafox
+ * @company Fourie Embeds
+ * @date November 2024
  *
- * Licencia: Código libre bajo MIT. Puede ser modificado y distribuido
- *           bajo los términos establecidos por la licencia.
+ * @license Free code under MIT. It can be modified and distributed under the terms
+ *          established by the license.
  ***************************************************************************************/
 #include <Arduino.h>
-#include "TimerOne.h" // Librería para usar el temporizador 1 de Arduino
-#include "DHT.h"      // Librería para el sensor DHT (temperatura y humedad)
-#include "PID.hpp"    // Librería personalizada para el controlador PID
+#include "TimerOne.h" // Library for using Arduino's Timer 1
+#include "DHT.h"      // Library for the DHT sensor (temperature and humidity)
+#include "PID.hpp"    // Custom library for the PID controller
 
 // Macros
-#define SEMICICLOS_MAX 120 // Número máximo de semiciclos (para el control de encendido del relé)
+#define MAX_HALF_CYCLES 120 // Maximum number of half-cycles (for relay control)
 
-// Configuración de Pines (GPIO)
-#define ZC_PIN 3   // Pin para detectar el cruce por cero (usado para sincronizar el control de encendido)
-#define FIRE_PIN 7 // Pin para controlar el disparo del SSR (relé de estado sólido)
-#define SENSOR 6   // Pin para conectar el sensor DHT (temperatura y humedad)
+// Pin Configuration (GPIO)
+#define ZC_PIN 3   // Pin to detect zero crossing (used to synchronize power control)
+#define FIRE_PIN 7 // Pin to control the SSR (Solid State Relay) trigger
+#define SENSOR_PIN 6   // Pin to connect the DHT sensor (temperature and humidity)
 
-/**************************** Parámetros del PID ********************************/
-// Parámetros del controlador PID
-float KP = 15.0;  // Ganancia proporcional
-float KI = 0.25;  // Ganancia integral
-float KD = 0.005; // Ganancia derivativa
+/**************************** PID Parameters ********************************/
+// PID controller parameters
+float KP = 15.0;  // Proportional gain
+float KI = 0.25;  // Integral gain
+float KD = 0.005; // Derivative gain
 
-// Constantes del filtro de paso bajo derivativo
-const float TAU = 0.25; // Constante de tiempo para el filtro derivativo
+// Derivative low-pass filter constant
+const float TAU = 0.25; // Time constant for the derivative filter
 
-// Tiempo de muestreo del PID (en segundos)
+// PID sampling time (in seconds)
 const float T_SAMPLE = 1;
 
-// Límites para la salida del controlador PID
-const float LIM_MIN = 0.0;            // Límite mínimo de salida (ciclos ON)
-const float LIM_MAX = SEMICICLOS_MAX; // Límite máximo de salida (ciclos ON)
+// Limits for the PID controller output
+const float LIM_MIN = 0.0;            // Minimum output limit (ON cycles)
+const float LIM_MAX = MAX_HALF_CYCLES; // Maximum output limit (ON cycles)
 
-// Límites para el integrador (evitar wind-up)
-const float LIM_MIN_INT = -100.00; // Límite inferior para el integrador
-const float LIM_MAX_INT = 100.0;   // Límite superior para el integrador
+// Limits for the integrator (to prevent wind-up)
+const float LIM_MIN_INT = -100.00; // Lower limit for the integrator
+const float LIM_MAX_INT = 100.0;   // Upper limit for the integrator
 
-// Punto de consigna (temperatura objetivo)
-float SETPOINT = 37.0; // Temperatura deseada (en grados Celsius)
+// Setpoint (target temperature)
+float SETPOINT = 37.0; // Desired temperature (in degrees Celsius)
 
-// Instancia del controlador PID
+// PID controller instance
 PIDController pid(KP, KI, KD, TAU, LIM_MIN, LIM_MAX, LIM_MIN_INT, LIM_MAX_INT, T_SAMPLE);
 
-/**************************** Variables de control ********************************/
-// Variables relacionadas con las interrupciones y el control
-volatile bool flagSense = false; // Bandera para indicar que se debe realizar una medición
-volatile bool flagZC = false;    // Bandera para indicar que ocurrió un cruce por cero
+/**************************** Control Variables ********************************/
+// Variables related to interrupts and control
+volatile bool flagSense = false; // Flag to indicate that a measurement should be taken
+volatile bool flagZC = false;    // Flag to indicate that a zero crossing has occurred
 
-float temp = 0;         // Variable para almacenar la temperatura medida
-uint8_t ciclosOn = 0;   // Número de ciclos ON (controlado por PID)
-uint8_t contCiclos = 0; // Contador de ciclos actuales (basado en el cruce por cero)
+float temp = 0;         // Variable to store the measured temperature
+uint8_t ciclosOn = 0;   // Number of ON cycles (controlled by PID)
+uint8_t contCiclos = 0; // Current cycle counter (based on zero crossing)
 
-// Instancia del sensor DHT
-DHT sensor; // Inicializar el sensor DHT (se puede cambiar a DHT22 si es necesario)
+// DHT sensor instance
+DHT sensor; // Initialize the DHT sensor (can be changed to DHT22 if necessary)
 
-/**************************** Prototipos de funciones ********************************/
-void ZC_ISR();                               // Función de interrupción para el cruce por cero
-void SENSE_ISR();                            // Función de interrupción para la lectura del sensor
-void parseCommand(String command);           // Función para interpretar los comandos seriales
-float parseValue(String command, char type); // Función para extraer un valor de un comando
-void printGains();                           // Función para imprimir los valores de las ganancias y el setpoint
+/**************************** Function Prototypes ********************************/
+void ZC_ISR();                               // Interrupt service routine for zero crossing
+void SENSE_ISR();                            // Interrupt service routine for sensor reading
+void parseCommand(String command);           // Function to interpret serial commands
+float parseValue(String command, char type); // Function to extract a value from a command
+void printGains();                           // Function to print the gain and setpoint values
 
 void setup()
 {
-  // Inicializar comunicación serial a 9600 baudios
+  // Initialize serial communication at 9600 baud
   Serial.begin(9600);
 
-  // Configuración de pines de entrada y salida
-  pinMode(ZC_PIN, INPUT_PULLUP); // Configurar el pin de cruce por cero como entrada con resistencia pull-up
-  pinMode(FIRE_PIN, OUTPUT);     // Configurar el pin del SSR como salida
+  // Configure input and output pins
+  pinMode(ZC_PIN, INPUT_PULLUP); // Configure the zero-crossing pin as an input with a pull-up resistor
+  pinMode(FIRE_PIN, OUTPUT);     // Configure the SSR pin as an output
 
-  // Configuración de interrupciones para el cruce por cero
-  attachInterrupt(digitalPinToInterrupt(ZC_PIN), ZC_ISR, FALLING); // Detecta el flanco de bajada del cruce por cero
+  // Configure zero-crossing interrupt
+  attachInterrupt(digitalPinToInterrupt(ZC_PIN), ZC_ISR, FALLING); // Detect the falling edge of the zero-crossing signal
 
-  // Configuración del temporizador 1 para generar interrupciones cada T_SAMPLE segundos
-  Timer1.initialize(T_SAMPLE * 1e6); // Configura Timer1 para que se dispare cada T_SAMPLE segundos
-  Timer1.attachInterrupt(SENSE_ISR); // Asocia la interrupción para la lectura del sensor con el temporizador
+  // Configure Timer1 to generate interrupts every T_SAMPLE seconds
+  Timer1.initialize(T_SAMPLE * 1e6); // Set up Timer1 to trigger every T_SAMPLE seconds
+  Timer1.attachInterrupt(SENSE_ISR); // Associate the sensor reading interrupt with the timer
 
-  // Configuración del sensor DHT
-  sensor.setup(SENSOR); // Configura el sensor DHT en el pin definido
+  // Configure the DHT sensor
+  sensor.setup(SENSOR_PIN); // Set up the DHT sensor on the defined pin
 
-  // Inicialización de la salida (apagar SSR al inicio)
+  // Initialize the output (turn off the SSR at the beginning)
   digitalWrite(FIRE_PIN, LOW);
 
-  // Mensaje de inicio
-  // Serial.println("Controlador PID iniciado.");
-  // printGains(); // Imprime los parámetros iniciales del PID
+  // Startup message
+  // Serial.println("PID Controller Initialized.");
+  // printGains(); // Print the initial PID parameters
 }
 
 void loop()
 {
-  // Si hay datos disponibles en el puerto serie, se procesan
+  // If there is data available on the serial port, process it
   if (Serial.available() > 0)
   {
-    String incomingCommand = Serial.readStringUntil('\n'); // Lee la línea completa hasta el salto de línea
-    parseCommand(incomingCommand);                         // Interpreta el comando recibido
-    // printGains();                                          // Imprime los valores actuales del setpoint y las ganancias
+    String incomingCommand = Serial.readStringUntil('\n'); // Read the entire line until a newline character
+    parseCommand(incomingCommand);                         // Interpret the received command
+    // printGains();                                          // Print the current setpoint and gain values
   }
 
-  // Si se activó la bandera de sensado, se lee la temperatura y se actualiza el PID
+  // If the sensing flag is activated, read the temperature and update the PID
   if (flagSense)
   {
-    flagSense = false; // Restablecer la bandera
+    flagSense = false; // Reset the flag
 
-    temp = sensor.getTemperature(); // Obtener la temperatura del sensor
+    temp = sensor.getTemperature(); // Get the temperature from the sensor
 
-    // Verificar si la lectura de la temperatura fue exitosa
+    // Check if the temperature reading was successful
     if (isnan(temp))
     {
-      Serial.println("Error: No se puede leer la temperatura.");
-      temp = 0;     // Restablecer temperatura en caso de error
-      ciclosOn = 0; // Desactivar ciclos
+      Serial.println("Error: Could not read temperature.");
+      temp = 0;     // Reset temperature in case of an error
+      ciclosOn = 0; // Deactivate cycles
     }
 
-    // Calcular el número de ciclos ON a partir de la salida del PID
-    ciclosOn = static_cast<uint8_t>(pid.update(SETPOINT, temp)); // Actualiza la salida del PID
+    // Calculate the number of ON cycles from the PID output
+    ciclosOn = static_cast<uint8_t>(pid.update(SETPOINT, temp)); // Update the PID output
 
-    // Imprimir la temperatura y el setpoint en el puerto serial
+    // Print the temperature and setpoint to the serial port
     Serial.print(temp);
     Serial.print(",");
     Serial.println(SETPOINT);
   }
 
-  // Si se detectó un cruce por cero, se maneja el encendido/apagado del SSR
+  // If a zero crossing was detected, handle the SSR on/off state
   if (flagZC)
   {
-    flagZC = false; // Restablecer la bandera
+    flagZC = false; // Reset the flag
 
-    // Incrementar el contador de ciclos, y restablecerlo si alcanza el máximo
-    if (++contCiclos >= SEMICICLOS_MAX)
+    // Increment the cycle counter, and reset it if it reaches the maximum
+    if (++contCiclos >= MAX_HALF_CYCLES)
     {
       contCiclos = 0;
     }
 
-    // Controlar el estado del SSR (relé) dependiendo de los ciclos ON calculados
-    digitalWrite(FIRE_PIN, (contCiclos < ciclosOn) ? HIGH : LOW); // Encender/apagar el SSR
+    // Control the state of the SSR (relay) depending on the calculated ON cycles
+    digitalWrite(FIRE_PIN, (contCiclos < ciclosOn) ? HIGH : LOW); // Turn the SSR on/off
   }
 }
 
-// Interrupción para el cruce por cero
+// Interrupt for zero crossing
 void ZC_ISR() { flagZC = true; }
 
-// Interrupción para la lectura del sensor (temporizador)
+// Interrupt for sensor reading (timer)
 void SENSE_ISR() { flagSense = true; }
 
-// Función para parsear un valor numérico de un comando
+// Function to parse a numeric value from a command
 float parseValue(String command, char type)
 {
-  // Verificar si el comando contiene un valor numérico
+  // Check if the command contains a numeric value
   if (command.length() > 1 && isDigit(command[1]))
   {
-    return command.substring(1).toFloat(); // Extraer el valor numérico
+    return command.substring(1).toFloat(); // Extract the numeric value
   }
   else
   {
-    Serial.print("Error: valor inválido para ");
-    Serial.println(type); // Mensaje de error si no se encuentra un valor válido
-    return NAN;           // Retornar "Not-a-Number" si el valor no es válido
+    Serial.print("Error: invalid value for ");
+    Serial.println(type); // Error message if no valid value is found
+    return NAN;           // Return "Not-a-Number" if the value is not valid
   }
 }
 
-// Función para interpretar los comandos seriales
+// Function to interpret serial commands
 void parseCommand(String command)
 {
-  if (command.startsWith("P")) // Comando para ajustar KP
+  if (command.startsWith("P")) // Command to adjust KP
   {
     float value = parseValue(command, 'P');
     if (!isnan(value))
-      KP = value; // Actualizar el valor de KP
+      KP = value; // Update the value of KP
   }
-  else if (command.startsWith("I")) // Comando para ajustar KI
+  else if (command.startsWith("I")) // Command to adjust KI
   {
     float value = parseValue(command, 'I');
     if (!isnan(value))
-      KI = value; // Actualizar el valor de KI
+      KI = value; // Update the value of KI
   }
-  else if (command.startsWith("D")) // Comando para ajustar KD
+  else if (command.startsWith("D")) // Command to adjust KD
   {
     float value = parseValue(command, 'D');
     if (!isnan(value))
-      KD = value; // Actualizar el valor de KD
+      KD = value; // Update the value of KD
   }
-  else if (command.startsWith("S")) // Comando para ajustar el setpoint
+  else if (command.startsWith("S")) // Command to adjust the setpoint
   {
     float value = parseValue(command, 'S');
     if (!isnan(value))
-      SETPOINT = value; // Actualizar el setpoint
+      SETPOINT = value; // Update the setpoint
   }
   else
   {
-    Serial.println("Comando inválido."); // Mensaje de error si el comando no es reconocido
+    Serial.println("Invalid command."); // Error message if the command is not recognized
   }
 
-  // Actualizar las ganancias del controlador PID con los nuevos valores
+  // Update the PID controller gains with the new values
   pid.updateGains(KP, KI, KD);
 }
 
-// Función para imprimir los valores actuales de las ganancias y el setpoint
+// Function to print the current values of the gains and the setpoint
 void printGains()
 {
   Serial.print("Setpoint: ");

@@ -1,128 +1,127 @@
 /****************************************************************************************
- * Archivo: PID.hpp
- * Descripción: Implementación de un controlador PID para sistemas embebidos, utilizado
- *              en la regulación de sistemas de temperatura o variables físicas.
- *              Este archivo contiene la clase `PIDController` que gestiona los cálculos
- *              PID, con soporte para ajustes dinámicos de ganancias y limitación de la
- *              salida del controlador.
+ * @file PID.cpp
+ * @brief Implementation of a PID controller for embedded systems, used for regulating
+ *        temperature or other physical variables. This file contains the `PIDController`
+ *        class that manages PID calculations, with support for dynamic gain adjustments
+ *        and limitation of the controller output.
  *
- * Autor: Adrian Silva Palafox
- * Empresa: Fourie Embeds
- * Fecha de creación: Noviembre 2024
+ * @author Adrian Silva Palafox
+ * @company Fourie Embeds
+ * @date November 2024
  *
- * Licencia: Este código es de código abierto bajo la licencia [Tu Licencia Aquí].
- *           Puede ser modificado y distribuido con fines educativos o comerciales.
+ * @license This code is open source under the [Your License Here] license.
+ *          It can be modified and distributed for educational or commercial purposes.
  *
- * Nota: Se asume que las librerías necesarias como "PID.hpp" y otras dependencias ya
- *       están correctamente incluidas y configuradas en el entorno de desarrollo.
+ * @note It is assumed that the necessary libraries like "PID.hpp" and other dependencies
+ *       are already correctly included and configured in the development environment.
  ***************************************************************************************/
 
-// Inclusión del archivo de cabecera para la implementación del PID
+// Include the header file for the PID implementation
 #include "PID.hpp"
 
-// Constructor de la clase PIDController
+// Constructor of the PIDController class
 PIDController::PIDController(float kp, float ki, float kd,
                              float tau,
                              float limMin, float limMax,
                              float limMinInt, float limMaxInt,
                              float t)
-    : Kp(kp), Ki(ki), Kd(kd),                     // Inicialización de las ganancias PID (proporcional, integral, derivativa)
-      tau(tau),                                   // Tiempo de constante del filtro de paso bajo (para el derivativo)
-      limMin(limMin), limMax(limMax),             // Límites para la salida del controlador
-      limMinInt(limMinInt), limMaxInt(limMaxInt), // Límites para el integrador (prevención de wind-up)
-      T(t),                                       // Tiempo de muestreo (intervalo de tiempo entre actualizaciones)
-      integrator(0.0f),                           // Inicialización del integrador (acumula el error)
-      prevError(0.0f),                            // Inicialización del error previo (para el cálculo del derivativo)
-      differentiator(0.0f),                       // Inicialización del diferenciador (para el término derivativo)
-      prevMeasurement(0.0f),                      // Inicialización de la medición previa (para el cálculo del derivativo)
-      out(0.0f)                                   // Inicialización de la salida del controlador
+    : Kp(kp), Ki(ki), Kd(kd),                     // Initialize PID gains (proportional, integral, derivative)
+      tau(tau),                                   // Low-pass filter time constant (for the derivative)
+      limMin(limMin), limMax(limMax),             // Limits for the controller output
+      limMinInt(limMinInt), limMaxInt(limMaxInt), // Limits for the integrator (anti-windup)
+      T(t),                                       // Sampling time (time interval between updates)
+      integrator(0.0f),                           // Initialize the integrator (accumulates error)
+      prevError(0.0f),                            // Initialize the previous error (for derivative calculation)
+      differentiator(0.0f),                       // Initialize the differentiator (for the derivative term)
+      prevMeasurement(0.0f),                      // Initialize the previous measurement (for derivative calculation)
+      out(0.0f)                                   // Initialize the controller output
 {
 }
 
-// Método para reiniciar el controlador PID
+// Method to reset the PID controller
 void PIDController::reset()
 {
-    integrator = 0.0f;      // Reiniciar el integrador
-    prevError = 0.0f;       // Reiniciar el error previo
-    differentiator = 0.0f;  // Reiniciar el diferenciador
-    prevMeasurement = 0.0f; // Reiniciar la medición previa
-    out = 0.0f;             // Reiniciar la salida
+    integrator = 0.0f;      // Reset the integrator
+    prevError = 0.0f;       // Reset the previous error
+    differentiator = 0.0f;  // Reset the differentiator
+    prevMeasurement = 0.0f; // Reset the previous measurement
+    out = 0.0f;             // Reset the output
 }
 
-// Método que actualiza el controlador PID cada vez que se llama
+// Method that updates the PID controller each time it is called
 float PIDController::update(float setpoint, float measurement)
 {
-    // Calcular el error (diferencia entre el setpoint y la medición)
+    // Calculate the error (difference between the setpoint and the measurement)
     float error = setpoint - measurement;
 
-    // Cálculo del término proporcional (Kp * error)
+    // Calculate the proportional term (Kp * error)
     float proportional = Kp * error;
 
-    // Cálculo del término integral (integración del error)
-    integrator += 0.5f * Ki * T * (error + prevError); // Método de integración trapezoidal (suma promedio de los errores)
+    // Calculate the integral term (integration of the error)
+    integrator += 0.5f * Ki * T * (error + prevError); // Trapezoidal integration method (average sum of errors)
 
-    // Anti-windup: Limitar el valor del integrador para evitar que se acumule demasiado error
+    // Anti-windup: Limit the integrator value to prevent excessive error accumulation
     if (integrator > limMaxInt)
     {
-        integrator = limMaxInt; // Limitar el integrador al valor máximo permitido
+        integrator = limMaxInt; // Clamp the integrator to the maximum allowed value
     }
     else if (integrator < limMinInt)
     {
-        integrator = limMinInt; // Limitar el integrador al valor mínimo permitido
+        integrator = limMinInt; // Clamp the integrator to the minimum allowed value
     }
 
-    // Cálculo del término derivativo (con filtro de paso bajo para evitar ruido)
+    // Calculate the derivative term (with a low-pass filter to avoid noise)
     differentiator = -(2.0f * Kd * (measurement - prevMeasurement) +
                        (2.0f * tau - T) * differentiator) /
                      (2.0f * tau + T);
 
-    // Cálculo de la salida total del controlador (Suma de proporcional, integral y derivativo)
+    // Calculate the total controller output (Sum of proportional, integral, and derivative)
     out = proportional + integrator + differentiator;
 
-    // Aplicar límites a la salida (salida del controlador debe estar dentro de los límites definidos)
+    // Apply limits to the output (the controller output must be within the defined limits)
     if (out > limMax)
     {
-        out = limMax; // Limitar la salida al máximo
+        out = limMax; // Limit the output to the maximum
     }
     else if (out < limMin)
     {
-        out = limMin; // Limitar la salida al mínimo
+        out = limMin; // Limit the output to the minimum
     }
 
-    // Actualizar la memoria del controlador (errores y mediciones previas para el próximo ciclo)
+    // Update the controller's memory (previous errors and measurements for the next cycle)
     prevError = error;
     prevMeasurement = measurement;
 
-    // Retornar la salida del controlador (cuánto debe ajustarse la variable controlada)
+    // Return the controller output (how much the controlled variable should be adjusted)
     return out;
 }
 
-// Método para actualizar las ganancias Kp, Ki y Kd en tiempo de ejecución
+// Method to update the Kp, Ki, and Kd gains at runtime
 void PIDController::updateGains(float kp, float ki, float kd)
 {
-    Kp = kp; // Actualizar la ganancia proporcional
-    Ki = ki; // Actualizar la ganancia integral
-    Kd = kd; // Actualizar la ganancia derivativa
+    Kp = kp; // Update the proportional gain
+    Ki = ki; // Update the integral gain
+    Kd = kd; // Update the derivative gain
 }
 
-// Métodos para obtener las ganancias Kp, Ki y Kd de forma individual
+// Methods to get the Kp, Ki, and Kd gains individually
 float PIDController::getKp() const
 {
-    return Kp; // Retornar la ganancia proporcional
+    return Kp; // Return the proportional gain
 }
 
 float PIDController::getKi() const
 {
-    return Ki; // Retornar la ganancia integral
+    return Ki; // Return the integral gain
 }
 
 float PIDController::getKd() const
 {
-    return Kd; // Retornar la ganancia derivativa
+    return Kd; // Return the derivative gain
 }
 
-// Método para obtener todas las ganancias juntas como un struct (útil para enviar por serial u otros)
+// Method to get all gains together as a struct (useful for sending via serial, etc.)
 PIDGains PIDController::getGains() const
 {
-    return {Kp, Ki, Kd}; // Retornar las tres ganancias como un struct
+    return {Kp, Ki, Kd}; // Return the three gains as a struct
 }
