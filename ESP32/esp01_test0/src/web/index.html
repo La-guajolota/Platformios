@@ -1,0 +1,26 @@
+<!-- @format -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ESP32 Count Display</title>
+    <script>
+      function fetchCount() {
+        fetch("/count")
+          .then((response) => response.json())
+          .then((data) => {
+            document.getElementById("count").innerText = data.count;
+          })
+          .catch((error) => console.error("Error fetching count:", error));
+      }
+
+      setInterval(fetchCount, 1000); // Fetch count every second
+    </script>
+  </head>
+  <body>
+    <h1>ESP32 Count Display</h1>
+    <p>Current Count: <span id="count">0</span></p>
+  </body>
+</html>

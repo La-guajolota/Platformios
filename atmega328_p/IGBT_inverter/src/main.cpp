@@ -1,83 +1,107 @@
 /**
- * @file     main.c
+ * @file     main.cpp
  * @author   Adrián Silva Palafox
  * @date     2024-11-30
- * @version  0.2
- * @brief    Controlador de 6 IGBTs para un inversor trifásico basado en Arduino.
- * @details  Este programa implementa un registro circular para generar la secuencia de disparo
- *           de 6 IGBTs conectados al puerto B de un microcontrolador ATmega328P (Arduino Uno).
- *           Está diseñado para convertir voltaje DC en una señal AC trifásica utilizando
- *           conmutación en 3 pares de IGBTs con desfase entre ellos.
+ * @version  0.3
+ * @brief    Six-IGBT driver for a three-phase inverter using Arduino.
+ * @details  This program implements a circular shift register to generate the firing sequence
+ *           for 6 IGBTs connected to port B of an ATmega328P microcontroller (Arduino Uno).
+ *           It is designed to convert DC voltage into a three-phase AC signal by switching
+ *           3 pairs of IGBTs with a phase shift between them.
  *
- *           La conmutación está programada con un período fijo definido en microsegundos,
- *           y cada par de IGBTs está configurado en modo complementario.
+ *           The switching is programmed with a fixed period defined in microseconds,
+ *           and each pair of IGBTs is configured in a complementary mode.
  *
- * @note     Este código se puede extender para integrar modulación PWM con un desfase
- *           de 120° entre las fases. Para evitar cortocircuitos en los IGBTs, se recomienda
- *           incluir circuitos dead-time en el hardware.
+ * @note     This code can be extended to integrate PWM modulation with a 120° phase shift
+ *           between the phases. To prevent short circuits in the IGBTs, it is recommended
+ *           to include dead-time circuits in the hardware.
  *
  * @dependencies
- *           - Plataforma: Arduino Uno (ATmega328P)
- *           - Software: Arduino IDE o cualquier editor compatible con AVR-GCC
+ *           - Platform: Arduino Uno (ATmega328P)
+ *           - Software: Arduino IDE or any AVR-GCC compatible editor
  *
- * @usage    Este programa está diseñado para operar en sistemas de potencia con inversores
- *           trifásicos. Asegúrate de conectar los IGBTs al puerto B según la configuración del
- *           registro y utilizar circuitos de aislamiento adecuados (optoacopladores o drivers).
+ * @usage    This program is designed for power systems with three-phase inverters.
+ *           Ensure that the IGBTs are connected to port B according to the register
+ *           configuration and use appropriate isolation circuits (optocouplers or drivers).
  *
- * @warning  Asegúrate de verificar la sincronización y la frecuencia de conmutación para evitar
- *           daños en los componentes electrónicos y asegurar una salida de potencia adecuada.
+ * @warning  Make sure to verify the synchronization and switching frequency to avoid
+ *           damage to electronic components and ensure proper power output.
  */
 #include <Arduino.h>
 
-// Configuración
-// #define DEBUG_MODE          // Comentar para desactivar el modo de depuración
-#define IGBT_PERIOD_US 1388 // Tiempo entre activaciones en microsegundos
-#define MASK 0b00111111     // Pines PB0-PB5 como salidas
+// Configuration
+// #define DEBUG_MODE          // Uncomment to enable debug mode
+#define IGBT_PERIOD_US 1388 // Time between activations in microseconds
+#define MASK 0b00111111     // Use pins PB0-PB5 as outputs
 
-// Variables globales
-uint8_t reg = 0b00000111; // Registro inicial con 3 bits en HIGH
+// Global variables
+uint8_t reg = 0b00000111; // Initial register with 3 bits set to HIGH
 
-// Funciones
+// Function prototypes
 void nextCommutation();
 
+/**
+ * @brief Initializes the microcontroller.
+ * @details Sets up the pins connected to the IGBTs as outputs and initializes them to LOW.
+ *          If DEBUG_MODE is enabled, it starts serial communication.
+ */
 void setup()
 {
   /*
-  PB0 -> PIN8  igbt_1  |  PB1 -> PIN9  igbtB_3 | PB2 -> PIN10 igbtC_5
-  PB3 -> PIN11 igbt_4  |  PB4 -> PIN12 igbtB_6 | PB5 -> PIN13 igbtC_2
-  */
-  DDRB |= MASK; // Configurar PB0-PB5 como salidas
-  PORTB = 0x00; // Inicializar en LOW
+   * Pin configuration:
+   * PB0 -> Arduino PIN 8  -> IGBT 1
+   * PB1 -> Arduino PIN 9  -> IGBT 3 (Phase B)
+   * PB2 -> Arduino PIN 10 -> IGBT 5 (Phase C)
+   * PB3 -> Arduino PIN 11 -> IGBT 4
+   * PB4 -> Arduino PIN 12 -> IGBT 6 (Phase B)
+   * PB5 -> Arduino PIN 13 -> IGBT 2 (Phase C)
+   */
+  DDRB |= MASK; // Configure pins PB0-PB5 as outputs
+  PORTB = 0x00; // Initialize all outputs to LOW
 
 #ifdef DEBUG_MODE
   Serial.begin(9600);
-  Serial.println("Controlador de inversor iniciado.");
-  Serial.println(F_CPU); // Muestra la frecuencia de reloj en Hz
+  Serial.println("Inverter controller initialized.");
+  Serial.print("Clock Frequency (F_CPU): ");
+  Serial.println(F_CPU); // Display the clock frequency in Hz
 #endif
 
-  delay(1000); // Retraso inicial
+  delay(1000); // Initial delay for stability
 }
 
+/**
+ * @brief Main loop of the program.
+ * @details Continuously calls the nextCommutation() function to update the IGBT states.
+ *          If DEBUG_MODE is enabled, it prints the current state of the register to the serial monitor.
+ */
 void loop()
 {
   nextCommutation();
 
 #ifdef DEBUG_MODE
-  Serial.print("Registro actual: ");
+  Serial.print("Current register: ");
   for (int8_t i = 5; i >= 0; i--)
   {
     Serial.print((reg >> i) & 1);
   }
   Serial.println();
-  delay(1000); // Tiempo adicional para observar el estado
+  delay(1000); // Additional delay to observe the state in debug mode
 #endif
 }
 
+/**
+ * @brief Performs the next commutation of the IGBTs.
+ * @details This function implements a circular left shift on the `reg` variable.
+ *          The 6th bit is moved to the 0th position, and all other bits are shifted left.
+ *          The result is masked to 6 bits and written to PORTB to control the IGBTs.
+ *          A delay is introduced to control the switching frequency.
+ */
 void nextCommutation()
 {
-  // Extraer el 5º bit, desplazarlo y combinarlo con el resto
+  // Perform a circular left shift
+  // Extract the 5th bit, shift it to the 0th position, and combine it with the rest of the shifted register
   reg = ((reg << 1) | ((reg >> 5) & 0b1)) & MASK;
 
-  PORTB = reg; // Actualizar las salidas
-  delayMicroseconds(IGBT_PERIOD_US);
+  PORTB = reg; // Update the outputs
+  delayMicroseconds(IGBT_PERIOD_US); // Wait for the defined period
 }
