@@ -1,0 +1,26 @@
+# Keep user-specific ignores
+./arduino-nano-iot/test-gpio/
+
+# PlatformIO
+.pio/
+.pioenvs/
+
+# VSCode
+.vscode/*
+!.vscode/extensions.json
+
+# Build artifacts
+**/*.o
+**/*.elf
+**/*.bin
+**/*.hex
+**/*.uf2
+
+# Logs
+*.log
+
+# macOS specific
+.DS_Store
+
+# PlatformIO backup files
+platformio.ini.old
