@@ -63,21 +63,21 @@ El sistema sigue un flujo de procesamiento claro y eficiente:
 
 ```mermaid
 graph TD
-    A[Señal ECG (30 Hz)] --> B{Filtro Pasa-Banda};
-    B --> C{Detección de Picos R};
-    C --> D[Cálculo de BPM];
-    D --> E[Zonas de Frecuencia Cardíaca];
+    A[Señal ECG (30 Hz)] --> B{Filtro Pasa-Banda}
+    B --> C{Detección de Picos R}
+    C --> D[Cálculo de BPM]
+    D --> E[Zonas de Frecuencia Cardíaca]
 
-    F[Datos GPS (1 Hz)] --> G{Procesamiento NMEA};
-    G --> H[Cálculo de Velocidad y Distancia];
-    H --> I[Zonas de Velocidad];
-    I --> J[Detección de Sprints];
+    F[Datos GPS (1 Hz)] --> G{Procesamiento NMEA}
+    G --> H[Cálculo de Velocidad y Distancia]
+    H --> I[Zonas de Velocidad]
+    I --> J[Detección de Sprints]
 
-    E --> K{Cálculo de Métricas (TRIMP)};
-    J --> K;
-    H --> K;
+    E --> K{Cálculo de Métricas (TRIMP)}
+    J --> K
+    H --> K
 
-    K --> L[Almacenamiento en SD (cada 60s)];
+    K --> L[Almacenamiento en SD (cada 60s)]
 ```
 
 ## 🚀 Cómo Empezar
