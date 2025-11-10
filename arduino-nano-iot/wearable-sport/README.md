@@ -1,126 +1,102 @@
-# Sistema de Monitoreo Deportivo - Estructura Modular
+# 🏃‍♂️ Sistema de Monitoreo Deportivo Wearable 🏃‍♀️
 
-## Estructura del Proyecto
+¡Bienvenido al repositorio del **Sistema de Monitoreo Deportivo**! Este proyecto es un dispositivo wearable basado en Arduino Nano IoT, diseñado para registrar y analizar métricas clave durante el ejercicio físico, como la frecuencia cardíaca, la velocidad y la distancia recorrida.
 
-```
-proyecto/
-├── src/
-│   ├── main.cpp                  # Archivo principal con setup() y loop()
-│   ├── config.h                  # Configuraciones y constantes
-│   ├── filter.h                  # Interfaz de filtros biquad
-│   ├── filter.cpp                # Implementación de filtros
-│   ├── heart_rate.h              # Interfaz de detección de FC
-│   ├── heart_rate.cpp            # Implementación de detección de FC
-│   ├── gps_processing.h          # Interfaz de procesamiento GPS
-│   ├── gps_processing.cpp        # Implementación de GPS
-│   ├── velocity_zones.h          # Interfaz de zonas de velocidad
-│   ├── velocity_zones.cpp        # Implementación de zonas de velocidad
-│   ├── heart_rate_zones.h        # Interfaz de zonas de FC
-│   ├── heart_rate_zones.cpp      # Implementación de zonas de FC
-│   ├── metrics.h                 # Interfaz de métricas de entrenamiento
-│   ├── metrics.cpp               # Implementación de métricas
-│   ├── sd_card.h                 # Interfaz de funciones SD
-│   └── sd_card.cpp               # Implementación de funciones SD
-├── lib/                          # Bibliotecas de PlatformIO
-└── platformio.ini                # Configuración de PlatformIO
-```
+![PCB del Proyecto](PCB.jpeg)
 
-## Descripción de Módulos
+## ✨ Características Principales
 
-### 1. **config.h**
-- Define todas las constantes de configuración del sistema
-- Pines de hardware (ADC, SD, etc.)
-- Parámetros de muestreo y comunicación
-- Umbrales y constantes de zonas
+- **Análisis de Frecuencia Cardíaca (ECG)**: Detección de picos R y cálculo de BPM en tiempo real.
+- **Seguimiento GPS**: Registro de velocidad, distancia y ubicación.
+- **Zonas de Entrenamiento**: Clasificación del esfuerzo en zonas de frecuencia cardíaca y velocidad.
+- **Métricas Avanzadas**: Cálculo de TRIMP (Training Impulse) para medir la carga de entrenamiento.
+- **Almacenamiento de Datos**: Guardado de sesiones en una tarjeta SD en formato CSV.
+- **Diseño Modular**: Código organizado en módulos para facilitar la mantenibilidad y escalabilidad.
 
-### 2. **filter.h/cpp**
-- Estructura `Biquad` para filtros IIR de segundo orden
-- Banco de 4 filtros en cascada para ECG
-- Función `filterSample()` para procesamiento de señal
+## 📂 Estructura del Proyecto
 
-### 3. **heart_rate.h/cpp**
-- Variables para detección de latidos cardíacos
-- Buffer circular de intervalos RR
-- Función `pushRR()` para cálculo de BPM promedio
-- Algoritmo adaptativo de detección de picos
-
-### 4. **gps_processing.h/cpp**
-- Objeto `TinyGPSPlus` para parseo de NMEA
-- Promedio móvil de velocidad (`movingAvg()`)
-- Conversión de hora UTC a local (`wrapLocalHour()`)
-
-### 5. **velocity_zones.h/cpp**
-- Enumeración de zonas de velocidad (CAM/TRO/CAR/SPR)
-- Acumuladores de tiempo y distancia por zona
-- Función `velZoneIndex()` para clasificación
-
-### 6. **heart_rate_zones.h/cpp**
-- Enumeración de zonas de FC (HZ1-HZ6)
-- Acumuladores de tiempo por zona
-- Función `hrZoneIndex()` basada en % de FC máxima
-
-### 7. **metrics.h/cpp**
-- Variables de métricas globales (distancia, TRIMP)
-- Detección de sprints con histéresis
-- Temporizadores del sistema
-
-### 8. **sd_card.h/cpp**
-- Creación de archivo CSV con encabezados
-- Guardado periódico de datos cada minuto
-- Formateo de timestamp con GPS
-- Reseteo de acumuladores
-
-### 9. **main.cpp**
-- Función `setup()`: inicialización del sistema
-- Función `loop()`: bucle principal con tres tareas:
-  - Muestreo ECG a 30 Hz
-  - Procesamiento GPS cada segundo
-  - Resumen y guardado cada minuto
-
-## Flujo de Datos
+El código está organizado de forma modular para una máxima claridad y reutilización.
 
 ```
-ECG Signal (30 Hz)
-    ↓
-Filter Module → Heart Rate Detection
-                      ↓
-                   BPM value
-                      ↓
-                Heart Rate Zones
-                      ↓
-GPS Data (1 Hz)      Metrics & TRIMP
-    ↓                    ↓
-GPS Processing           ↓
-    ↓                    ↓
-Velocity Zones    ← ← ← ←
-    ↓
-Sprint Detection
-    ↓
-    ↓← ← ← ← ← ← ← ← ← ← ← 
-    ↓                      
-SD Card Module (every 60s)
+/media/adrian/sd_linux/embebidos/MCUs/platformios/arduino-nano-iot/wearable-sport/
+├── include/              # Archivos de cabecera (.h)
+│   ├── config.h
+│   ├── filter.h
+│   ├── gps_processing.h
+│   ├── heart_rate.h
+│   ├── heart_rate_zones.h
+│   ├── metrics.h
+│   ├── sd_card.h
+│   └── velocity_zones.h
+├── src/                  # Archivos de implementación (.cpp)
+│   ├── main.cpp
+│   ├── filter.cpp
+│   ├── gps_processing.cpp
+│   ├── heart_rate.cpp
+│   ├── heart_rate_zones.cpp
+│   ├── metrics.cpp
+│   ├── sd_card.cpp
+│   └── velocity_zones.cpp
+├── lib/                  # Bibliotecas externas
+├── test/                 # Pruebas (si aplica)
+├── platformio.ini        # Archivo de configuración de PlatformIO
+└── README.md             # ¡Estás aquí!
 ```
 
-## Dependencias
+## 🛠️ Módulos del Sistema
 
-- **Arduino.h**: Funciones básicas de Arduino
-- **TinyGPSPlus**: Parseo de datos GPS
-- **SD.h**: Lectura/escritura en tarjeta SD
-- **SPI.h**: Comunicación con SD
+| Módulo                 | Descripción                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- |
+| `main.cpp`             | Orquesta el sistema: inicializa los módulos y gestiona el bucle principal.                              |
+| `config.h`             | Centraliza todas las constantes y pines de configuración del hardware.                                  |
+| `filter.h/cpp`         | Implementa un banco de filtros biquad en cascada para limpiar la señal de ECG.                          |
+| `heart_rate.h/cpp`     | Contiene el algoritmo de detección de picos R para calcular los intervalos RR y los BPM.                |
+| `gps_processing.h/cpp` | Procesa los datos NMEA del GPS para obtener velocidad, distancia y hora UTC.                              |
+| `velocity_zones.h/cpp` | Clasifica la velocidad actual en zonas predefinidas (caminar, trotar, correr, sprint).                  |
+| `heart_rate_zones.h/cpp` | Clasifica los BPM actuales en zonas de esfuerzo (Z1 a Z6) basadas en la FC máxima.                      |
+| `metrics.h/cpp`        | Calcula métricas de rendimiento como la distancia total, TRIMP y detecta sprints.                        |
+| `sd_card.h/cpp`        | Gestiona la creación y escritura de archivos CSV en la tarjeta SD para el registro de datos.            |
 
-## Notas de Compilación
+## 🌊 Flujo de Datos
 
-Este proyecto está diseñado para **PlatformIO**. Asegúrate de:
+El sistema sigue un flujo de procesamiento claro y eficiente:
 
-1. Tener instaladas las bibliotecas necesarias en `lib/` o `lib_deps`
-2. Configurar correctamente `platformio.ini` con tu placa objetivo
-3. Todos los archivos `.h` y `.cpp` deben estar en el directorio `src/`
+```mermaid
+graph TD
+    A[Señal ECG (30 Hz)] --> B{Filtro Pasa-Banda};
+    B --> C{Detección de Picos R};
+    C --> D[Cálculo de BPM];
+    D --> E[Zonas de Frecuencia Cardíaca];
 
-## Ventajas de la Modularización
+    F[Datos GPS (1 Hz)] --> G{Procesamiento NMEA};
+    G --> H[Cálculo de Velocidad y Distancia];
+    H --> I[Zonas de Velocidad];
+    I --> J[Detección de Sprints];
 
-✅ **Mantenibilidad**: Cada módulo tiene una responsabilidad clara  
-✅ **Reutilización**: Los módulos pueden usarse en otros proyectos  
-✅ **Testing**: Facilita pruebas unitarias de componentes individuales  
-✅ **Legibilidad**: Código organizado y fácil de navegar  
-✅ **Colaboración**: Múltiples desarrolladores pueden trabajar en paralelo  
-✅ **Compilación**: Compilación incremental más rápida
+    E --> K{Cálculo de Métricas (TRIMP)};
+    J --> K;
+    H --> K;
+
+    K --> L[Almacenamiento en SD (cada 60s)];
+```
+
+## 🚀 Cómo Empezar
+
+Este proyecto está configurado para **PlatformIO**, un ecosistema profesional para el desarrollo de software embebido.
+
+1.  **Instalar PlatformIO**: Sigue las instrucciones en [platformio.org](https://platformio.org/).
+2.  **Clonar el Repositorio**: `git clone <URL_DEL_REPOSITORIO>`
+3.  **Instalar Dependencias**: PlatformIO gestionará automáticamente las bibliotecas listadas en `platformio.ini`.
+4.  **Compilar y Subir**: Conecta tu Arduino Nano IoT y usa los comandos de PlatformIO para compilar y subir el firmware.
+
+## ✅ Ventajas del Diseño Modular
+
+-   **Mantenibilidad**: Cada módulo tiene una única responsabilidad, facilitando su depuración y mejora.
+-   **Reutilización**: Los componentes como el filtro o el gestor de SD pueden ser fácilmente adaptados a otros proyectos.
+-   **Testing**: Permite realizar pruebas unitarias de forma aislada para cada módulo.
+-   **Legibilidad**: Un código bien estructurado es más fácil de entender y navegar.
+-   **Colaboración**: Facilita el trabajo en equipo, permitiendo que varios desarrolladores trabajen en paralelo.
+
+---
+
+Hecho con ❤️ y código limpio.
