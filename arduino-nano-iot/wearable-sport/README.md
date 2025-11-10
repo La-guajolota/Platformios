@@ -61,26 +61,13 @@ El código está organizado de forma modular para una máxima claridad y reutili
 
 El sistema sigue un flujo de procesamiento claro y eficiente:
 
-```mermaid
-```mermaid
-graph TD
-    A[Señal ECG (30 Hz)] --> B{Filtro Pasa-Banda}
-    B --> C{Detección de Picos R}
-    C --> D[Cálculo de BPM]
-    D --> E[Zonas de Frecuencia Cardíaca]
+El sistema sigue un flujo de procesamiento claro y eficiente:
 
-    F[Datos GPS (1 Hz)] --> G{Procesamiento NMEA}
-    G --> H[Cálculo de Velocidad y Distancia]
-    H --> I[Zonas de Velocidad]
-    I --> J[Detección de Sprints]
-
-    E --> K{Cálculo de Métricas (TRIMP)}
-    J --> K
-    H --> K
-
-    K --> L[Almacenamiento en SD (cada 60s)]
-```
-```
+1.  **Señal ECG (30 Hz)**: Se filtra y se procesa para la detección de picos R.
+2.  **Detección de Picos R**: Calcula los intervalos RR y los BPM.
+3.  **Datos GPS (1 Hz)**: Se procesan para obtener velocidad, distancia y hora UTC.
+4.  **Cálculo de Métricas**: Utiliza los BPM, velocidad y distancia para calcular métricas como TRIMP y detectar sprints.
+5.  **Almacenamiento en SD**: Los datos procesados se guardan en la tarjeta SD cada 60 segundos.
 
 ## 🚀 Cómo Empezar
 
