@@ -62,6 +62,7 @@ El código está organizado de forma modular para una máxima claridad y reutili
 El sistema sigue un flujo de procesamiento claro y eficiente:
 
 ```mermaid
+```mermaid
 graph TD
     A[Señal ECG (30 Hz)] --> B{Filtro Pasa-Banda}
     B --> C{Detección de Picos R}
@@ -78,6 +79,7 @@ graph TD
     H --> K
 
     K --> L[Almacenamiento en SD (cada 60s)]
+```
 ```
 
 ## 🚀 Cómo Empezar
