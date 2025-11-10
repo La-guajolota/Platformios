@@ -23,11 +23,30 @@ void setup() {
 
 void loop() {
   // Wait for user input to set motor state
+  // Prompt the user
   Serial.println("Enter motor command (0: Brake, 1: Forward, 2: Backward, 3: Stop):");
-  while (!Serial.available());
-  uint8_t command = Serial.read();
 
-  motorDriverSetup(command);
+  // Wait until something is available (avoid tight busy-wait)
+  while (!Serial.available()) {
+    delay(10);
+  }
+
+  // Read an integer from the serial input. This handles ASCII digits (e.g. '0')
+  // and multi-digit numbers, and skips non-numeric characters.
+  int command = Serial.parseInt();
+
+  // Clear up to the end of line so leftover CR/LF won't affect next read
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\n') break;
+  }
+
+  if (command < 0 || command > 3) {
+    Serial.println("Invalid command");
+  } else {
+    motorDriverSetup((uint8_t)command);
+  }
+  delay(50);
 }
 
 void motorDriverSetup(uint8_t combination) {
