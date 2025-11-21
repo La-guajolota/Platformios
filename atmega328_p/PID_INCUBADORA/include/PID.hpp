@@ -9,7 +9,7 @@
  * @company Fourie Embeds
  * @date November 2024
  *
- * @license This code is open source under the [Your License Here] license.
+ * @license This code is open source under the MIT license.
  *          It can be modified and distributed for educational or commercial purposes.
  *
  * @note Ensure that the necessary libraries are correctly included and configured
